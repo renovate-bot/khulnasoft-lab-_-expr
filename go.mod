@@ -10,7 +10,7 @@ require (
 	github.com/ohler55/ojg v1.21.0
 	github.com/sourcegraph/conc v0.3.0
 	github.com/stretchr/testify v1.8.4
-	github.com/tidwall/btree v1.7.0
+	github.com/tidwall/btree v1.8.1
 	google.golang.org/protobuf v1.33.0
 )
 
