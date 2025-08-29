@@ -9,7 +9,7 @@ require (
 	github.com/karlseguin/ccache/v2 v2.0.8
 	github.com/ohler55/ojg v1.21.0
 	github.com/sourcegraph/conc v0.3.0
-	github.com/stretchr/testify v1.8.4
+	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/btree v1.7.0
 	google.golang.org/protobuf v1.33.0
 )
