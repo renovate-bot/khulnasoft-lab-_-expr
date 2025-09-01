@@ -31,13 +31,13 @@ func NewFilter(str string) (f *Filter, err error) {
 // MustNewFilter creates a new Filter and panics on error.
 func MustNewFilter(str string) (f *Filter) {
 	p := &parser{buf: []byte(str)}
-	if len(p.buf) <= 5 ||
-		p.buf[0] != '[' || p.buf[1] != '?' || p.buf[2] != '(' ||
-		p.buf[len(p.buf)-2] != ')' || p.buf[len(p.buf)-1] != ']' {
-		panic(fmt.Errorf("a filter must start with a '[?(' and end with ')]'"))
+	if len(p.buf) <= 3 ||
+		p.buf[0] != '[' || p.buf[1] != '?' || p.buf[len(p.buf)-1] != ']' {
+		panic(fmt.Errorf("a filter must start with a '[?' and end with ']'"))
 	}
-	p.buf = p.buf[3 : len(p.buf)-1]
-	eq := p.readEquation()
+	p.buf = p.buf[2 : len(p.buf)-1]
+	eq := precedentCorrect(p.readEq())
+	eq = reduceGroups(eq, nil)
 
 	return eq.Filter()
 }
@@ -49,7 +49,7 @@ func (f *Filter) String() string {
 
 // Append a fragment string representation of the fragment to the buffer
 // then returning the expanded buffer.
-func (f Filter) Append(buf []byte, _, _ bool) []byte {
+func (f *Filter) Append(buf []byte, _, _ bool) []byte {
 	buf = append(buf, "[?"...)
 	buf = f.Script.Append(buf)
 	buf = append(buf, ']')
@@ -57,7 +57,7 @@ func (f Filter) Append(buf []byte, _, _ bool) []byte {
 	return buf
 }
 
-func (f Filter) remove(value any) (out any, changed bool) {
+func (f *Filter) remove(value any) (out any, changed bool) {
 	out = value
 	switch tv := value.(type) {
 	case []any:
@@ -95,6 +95,24 @@ func (f Filter) remove(value any) (out any, changed bool) {
 		for k, v := range tv {
 			if f.Match(v) {
 				delete(tv, k)
+				changed = true
+			}
+		}
+	case RemovableIndexed:
+		size := tv.Size()
+		for i := (size - 1); i >= 0; i-- {
+			v := tv.ValueAtIndex(i)
+			if f.Match(v) {
+				tv.RemoveValueAtIndex(i)
+				changed = true
+			}
+		}
+	case Keyed:
+		keys := tv.Keys()
+		for _, key := range keys {
+			v, _ := tv.ValueForKey(key)
+			if f.Match(v) {
+				tv.RemoveValueForKey(key)
 				changed = true
 			}
 		}
@@ -144,7 +162,7 @@ func (f Filter) remove(value any) (out any, changed bool) {
 	return
 }
 
-func (f Filter) removeOne(value any) (out any, changed bool) {
+func (f *Filter) removeOne(value any) (out any, changed bool) {
 	out = value
 	switch tv := value.(type) {
 	case []any:
@@ -199,6 +217,27 @@ func (f Filter) removeOne(value any) (out any, changed bool) {
 					changed = true
 					break
 				}
+			}
+		}
+	case RemovableIndexed:
+		size := tv.Size()
+		for i := 0; i < size; i++ {
+			v := tv.ValueAtIndex(i)
+			if f.Match(v) {
+				tv.RemoveValueAtIndex(i)
+				changed = true
+				break
+			}
+		}
+	case Keyed:
+		keys := tv.Keys()
+		sort.Strings(keys)
+		for _, key := range keys {
+			v, _ := tv.ValueForKey(key)
+			if f.Match(v) {
+				tv.RemoveValueForKey(key)
+				changed = true
+				break
 			}
 		}
 	default:
@@ -251,7 +290,7 @@ func (f Filter) removeOne(value any) (out any, changed bool) {
 	return
 }
 
-func (f Filter) locate(pp Expr, data any, rest Expr, max int) (locs []Expr) {
+func (f *Filter) locate(pp Expr, data any, rest Expr, max int) (locs []Expr) {
 	ns, lcs := f.evalWithRoot([]any{}, data, nil)
 	stack, _ := ns.([]any)
 	if len(rest) == 0 { // last one
@@ -272,4 +311,140 @@ func (f Filter) locate(pp Expr, data any, rest Expr, max int) (locs []Expr) {
 		}
 	}
 	return
+}
+
+// Walk each element that matches the filter.
+func (f *Filter) Walk(rest, path Expr, nodes []any, cb func(path Expr, nodes []any)) {
+	path = append(path, nil)
+	data := nodes[len(nodes)-1]
+	nodes = append(nodes, nil)
+	switch tv := data.(type) {
+	case []any:
+		for i, v := range tv {
+			if f.Match(v) {
+				path[len(path)-1] = Nth(i)
+				nodes[len(nodes)-1] = v
+				if 0 < len(rest) {
+					rest[0].Walk(rest[1:], path, nodes, cb)
+				} else {
+					cb(path, nodes)
+				}
+			}
+		}
+	case Indexed:
+		size := tv.Size()
+		for i := 0; i < size; i++ {
+			v := tv.ValueAtIndex(i)
+			if f.Match(v) {
+				path[len(path)-1] = Nth(i)
+				nodes[len(nodes)-1] = v
+				if 0 < len(rest) {
+					rest[0].Walk(rest[1:], path, nodes, cb)
+				} else {
+					cb(path, nodes)
+				}
+			}
+		}
+	case gen.Array:
+		for i, v := range tv {
+			if f.Match(v) {
+				path[len(path)-1] = Nth(i)
+				nodes[len(nodes)-1] = v
+				if 0 < len(rest) {
+					rest[0].Walk(rest[1:], path, nodes, cb)
+				} else {
+					cb(path, nodes)
+				}
+			}
+		}
+	case map[string]any:
+		if 0 < len(tv) {
+			keys := make([]string, 0, len(tv))
+			for k := range tv {
+				keys = append(keys, k)
+			}
+			sort.Strings(keys)
+			for _, k := range keys {
+				if f.Match(tv[k]) {
+					path[len(path)-1] = Child(k)
+					nodes[len(nodes)-1] = tv[k]
+					if 0 < len(rest) {
+						rest[0].Walk(rest[1:], path, nodes, cb)
+					} else {
+						cb(path, nodes)
+					}
+				}
+			}
+		}
+	case gen.Object:
+		if 0 < len(tv) {
+			keys := make([]string, 0, len(tv))
+			for k := range tv {
+				keys = append(keys, k)
+			}
+			sort.Strings(keys)
+			for _, k := range keys {
+				if f.Match(tv[k]) {
+					path[len(path)-1] = Child(k)
+					nodes[len(nodes)-1] = tv[k]
+					if 0 < len(rest) {
+						rest[0].Walk(rest[1:], path, nodes, cb)
+					} else {
+						cb(path, nodes)
+					}
+				}
+			}
+		}
+	case Keyed:
+		keys := tv.Keys()
+		sort.Strings(keys)
+		for _, key := range keys {
+			v, _ := tv.ValueForKey(key)
+			if f.Match(v) {
+				path[len(path)-1] = Child(key)
+				nodes[len(nodes)-1] = v
+				if 0 < len(rest) {
+					rest[0].Walk(rest[1:], path, nodes, cb)
+				} else {
+					cb(path, nodes)
+				}
+			}
+		}
+	default:
+		rv := reflect.ValueOf(tv)
+		switch rv.Kind() {
+		case reflect.Slice:
+			cnt := rv.Len()
+			for i := 0; i < cnt; i++ {
+				v := rv.Index(i).Interface()
+				if f.Match(v) {
+					path[len(path)-1] = Nth(i)
+					nodes[len(nodes)-1] = v
+					if 0 < len(rest) {
+						rest[0].Walk(rest[1:], path, nodes, cb)
+					} else {
+						cb(path, nodes)
+					}
+				}
+			}
+		case reflect.Map:
+			keys := rv.MapKeys()
+			sort.Slice(keys, func(i, j int) bool {
+				return strings.Compare(keys[i].String(), keys[j].String()) < 0
+			})
+			for _, k := range keys {
+				mv := rv.MapIndex(k)
+				v := mv.Interface()
+				if f.Match(v) {
+					path[len(path)-1] = Child(k.String())
+					nodes[len(nodes)-1] = v
+					if 0 < len(rest) {
+						rest[0].Walk(rest[1:], path, nodes, cb)
+					} else {
+						cb(path, nodes)
+					}
+				}
+			}
+		}
+	}
 }

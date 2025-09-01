@@ -1,8 +1,8 @@
 # [![{}j](assets/ojg_comet.svg)](https://github.com/ohler55/ojg)
 
 [![Build Status](https://github.com/ohler55/ojg/actions/workflows/CI.yml/badge.svg)](https://github.com/ohler55/ojg/actions)
-[![Coverage Status](https://coveralls.io/repos/github/ohler55/ojg/badge.svg?branch=master)](https://coveralls.io/github/ohler55/ojg?branch=master)
 [![Go Report Card](https://goreportcard.com/badge/github.com/ohler55/ojg)](https://goreportcard.com/report/github.com/ohler55/ojg)
+![](assets/coverage-badge.svg)
 
 Optimized JSON for Go is a high performance parser with a variety of
 additional JSON tools. OjG is optimized to processing huge data sets
@@ -84,7 +84,6 @@ go install ./...
 The `oj` application can be installed with brew.
 
 ```
-brew tap ohler55/tap
 brew install oj
 ```
 

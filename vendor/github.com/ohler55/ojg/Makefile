@@ -23,7 +23,12 @@ cover: lint
 	$Q grep github gen/cov.out >> cov.out
 	$Q grep github asm/cov.out >> cov.out
 	$Q go tool cover -func=cov.out | grep "total:"
+	$(eval COVERAGE = $(shell go tool cover -func=cov.out | grep "total:" | grep -Eo "[0-9]+\.[0-9]+"))
+	sh ./gen-coverage-badge.sh $(COVERAGE)
 
 test: cover
 
-.PHONY: all lint cover test
+build:
+	make -C cmd
+
+.PHONY: all lint cover test build

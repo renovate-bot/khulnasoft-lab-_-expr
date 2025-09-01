@@ -70,7 +70,7 @@ func (x Expr) Get(data any) (results []any) {
 			case Keyed:
 				v, has = tv.ValueForKey(string(tf))
 			default:
-				v, has = x.reflectGetChild(tv, string(tf))
+				v, has = reflectGetChild(tv, string(tf))
 			}
 			if has {
 				if int(fi) == len(x)-1 { // last one
@@ -119,7 +119,7 @@ func (x Expr) Get(data any) (results []any) {
 					has = true
 				}
 			default:
-				v, has = x.reflectGetNth(tv, i)
+				v, has = reflectGetNth(tv, i)
 			}
 			if has {
 				if int(fi) == len(x)-1 { // last one
@@ -262,7 +262,7 @@ func (x Expr) Get(data any) (results []any) {
 					}
 				}
 			default:
-				got := x.reflectGetWild(tv)
+				got := reflectGetWild(tv)
 				if int(fi) == len(x)-1 { // last one
 					for i := len(got) - 1; 0 <= i; i-- {
 						results = append(results, got[i])
@@ -433,7 +433,7 @@ func (x Expr) Get(data any) (results []any) {
 						}
 					}
 				default:
-					got := x.reflectGetWild(tv)
+					got := reflectGetWild(tv)
 					stack[len(stack)-1] = prev
 					stack = append(stack, di|descentFlag)
 					if int(fi) == len(x)-1 { // last one
@@ -495,7 +495,7 @@ func (x Expr) Get(data any) (results []any) {
 						case gen.Object:
 							v, has = tv[tu]
 						default:
-							v, has = x.reflectGetChild(tv, tu)
+							v, has = reflectGetChild(tv, tu)
 						}
 					case int64:
 						i := int(tu)
@@ -525,7 +525,7 @@ func (x Expr) Get(data any) (results []any) {
 								has = true
 							}
 						default:
-							v, has = x.reflectGetNth(tv, i)
+							v, has = reflectGetNth(tv, i)
 						}
 					}
 					if has {
@@ -546,7 +546,7 @@ func (x Expr) Get(data any) (results []any) {
 						case gen.Object:
 							v, has = tv[tu]
 						default:
-							v, has = x.reflectGetChild(tv, tu)
+							v, has = reflectGetChild(tv, tu)
 						}
 					case int64:
 						i := int(tu)
@@ -576,7 +576,7 @@ func (x Expr) Get(data any) (results []any) {
 								has = true
 							}
 						default:
-							v, has = x.reflectGetNth(tv, i)
+							v, has = reflectGetNth(tv, i)
 						}
 					}
 					if has {
@@ -801,7 +801,7 @@ func (x Expr) Get(data any) (results []any) {
 					}
 				}
 			default:
-				got := x.reflectGetSlice(tv, start, end, step)
+				got := reflectGetSlice(tv, start, end, step)
 				if int(fi) == len(x)-1 { // last one
 					for i := len(got) - 1; 0 <= i; i-- {
 						results = append(results, got[i])
@@ -834,6 +834,28 @@ func (x Expr) Get(data any) (results []any) {
 				}
 				if before < len(stack) {
 					stack = stack[:before]
+				}
+			}
+		case *Proc:
+			got := tf.Procedure.Get(prev)
+			if int(fi) == len(x)-1 { // last one
+				results = append(results, got...)
+			} else {
+				for i := len(got) - 1; 0 <= i; i-- {
+					v = got[i]
+					switch v.(type) {
+					case nil, bool, string, float64, float32, gen.Bool, gen.Float, gen.String,
+						int, uint, int8, int16, int32, int64, uint8, uint16, uint32, uint64, gen.Int:
+					case map[string]any, []any, gen.Object, gen.Array, Keyed, Indexed:
+						stack = append(stack, v)
+					default:
+						if rt := reflect.TypeOf(v); rt != nil {
+							switch rt.Kind() {
+							case reflect.Ptr, reflect.Slice, reflect.Struct, reflect.Array, reflect.Map:
+								stack = append(stack, v)
+							}
+						}
+					}
 				}
 			}
 		}
@@ -902,7 +924,7 @@ func (x Expr) FirstFound(data any) (any, bool) {
 			case gen.Object:
 				v, has = tv[string(tf)]
 			default:
-				v, has = x.reflectGetChild(tv, string(tf))
+				v, has = reflectGetChild(tv, string(tf))
 			}
 			if has {
 				if int(fi) == len(x)-1 { // last one
@@ -950,7 +972,7 @@ func (x Expr) FirstFound(data any) (any, bool) {
 					has = true
 				}
 			default:
-				v, has = x.reflectGetNth(tv, i)
+				v, has = reflectGetNth(tv, i)
 			}
 			if has {
 				if int(fi) == len(x)-1 { // last one
@@ -1093,7 +1115,7 @@ func (x Expr) FirstFound(data any) (any, bool) {
 					}
 				}
 			default:
-				if v, has = x.reflectGetWildOne(tv); has {
+				if v, has = reflectGetWildOne(tv); has {
 					if int(fi) == len(x)-1 { // last one
 						return v, true
 					}
@@ -1253,7 +1275,7 @@ func (x Expr) FirstFound(data any) (any, bool) {
 						}
 					}
 				default:
-					got := x.reflectGetWild(tv)
+					got := reflectGetWild(tv)
 					stack[len(stack)-1] = prev
 					stack = append(stack, di|descentFlag)
 					if int(fi) == len(x)-1 { // last one
@@ -1308,7 +1330,7 @@ func (x Expr) FirstFound(data any) (any, bool) {
 						case gen.Object:
 							v, has = tv[tu]
 						default:
-							v, has = x.reflectGetChild(tv, tu)
+							v, has = reflectGetChild(tv, tu)
 						}
 					case int64:
 						i := int(tu)
@@ -1338,7 +1360,7 @@ func (x Expr) FirstFound(data any) (any, bool) {
 								has = true
 							}
 						default:
-							v, has = x.reflectGetNth(tv, i)
+							v, has = reflectGetNth(tv, i)
 						}
 					}
 					if has {
@@ -1359,7 +1381,7 @@ func (x Expr) FirstFound(data any) (any, bool) {
 						case gen.Object:
 							v, has = tv[tu]
 						default:
-							v, has = x.reflectGetChild(tv, tu)
+							v, has = reflectGetChild(tv, tu)
 						}
 					case int64:
 						i := int(tu)
@@ -1389,7 +1411,7 @@ func (x Expr) FirstFound(data any) (any, bool) {
 								has = true
 							}
 						default:
-							v, has = x.reflectGetNth(tv, i)
+							v, has = reflectGetNth(tv, i)
 						}
 					}
 					if has {
@@ -1596,7 +1618,7 @@ func (x Expr) FirstFound(data any) (any, bool) {
 					}
 				}
 			default:
-				if v, has = x.reflectGetNth(tv, start); has {
+				if v, has = reflectGetNth(tv, start); has {
 					if int(fi) == len(x)-1 { // last one
 						return v, true
 					}
@@ -1626,6 +1648,28 @@ func (x Expr) FirstFound(data any) (any, bool) {
 					return result, true
 				}
 			}
+		case *Proc:
+			if int(fi) == len(x)-1 { // last one
+				return tf.Procedure.First(prev), true
+			} else {
+				got := tf.Procedure.Get(prev)
+				for i := len(got) - 1; 0 <= i; i-- {
+					v = got[i]
+					switch v.(type) {
+					case nil, bool, string, float64, float32, gen.Bool, gen.Float, gen.String,
+						int, uint, int8, int16, int32, int64, uint8, uint16, uint32, uint64, gen.Int:
+					case map[string]any, []any, gen.Object, gen.Array, Keyed, Indexed:
+						stack = append(stack, v)
+					default:
+						if rt := reflect.TypeOf(v); rt != nil {
+							switch rt.Kind() {
+							case reflect.Ptr, reflect.Slice, reflect.Struct, reflect.Array, reflect.Map:
+								stack = append(stack, v)
+							}
+						}
+					}
+				}
+			}
 		}
 		if int(fi) < len(x)-1 {
 			if _, ok := stack[len(stack)-1].(fragIndex); !ok {
@@ -1638,7 +1682,7 @@ func (x Expr) FirstFound(data any) (any, bool) {
 	return nil, false
 }
 
-func (x Expr) reflectGetChild(data any, key string) (v any, has bool) {
+func reflectGetChild(data any, key string) (v any, has bool) {
 	if !isNil(data) {
 		rd := reflect.ValueOf(data)
 		rt := rd.Type()
@@ -1654,7 +1698,12 @@ func (x Expr) reflectGetChild(data any, key string) (v any, has bool) {
 				has = true
 			}
 		case reflect.Map:
-			rv := rd.MapIndex(reflect.ValueOf(key))
+			mkt := rt.Key()
+			kt := reflect.TypeOf(key)
+			if !kt.ConvertibleTo(mkt) {
+				break
+			}
+			rv := rd.MapIndex(reflect.ValueOf(key).Convert(mkt))
 			if rv.IsValid() && rv.CanInterface() {
 				v = rv.Interface()
 				has = true
@@ -1681,10 +1730,7 @@ func reflectGetStructFieldByNameOrJsonTag(structValue reflect.Value, key string)
 		tagValue := f.Tag.Get("json")
 		jsonKey, _, _ := strings.Cut(tagValue, ",")
 		jsonKey = strings.Trim(jsonKey, " ")
-		if strings.EqualFold(jsonKey, key) {
-			return true
-		}
-		return false
+		return strings.EqualFold(jsonKey, key)
 	}
 
 	type fieldScan struct {
@@ -1809,10 +1855,14 @@ func reflectGetStructFieldByNameOrJsonTag(structValue reflect.Value, key string)
 	return
 }
 
-func (x Expr) reflectGetNth(data any, i int) (v any, has bool) {
+func reflectGetNth(data any, i int) (v any, has bool) {
 	if !isNil(data) {
 		rd := reflect.ValueOf(data)
 		rt := rd.Type()
+		if rt.Kind() == reflect.Ptr {
+			rt = rt.Elem()
+			rd = rd.Elem()
+		}
 		switch rt.Kind() {
 		case reflect.Slice, reflect.Array:
 			size := rd.Len()
@@ -1831,7 +1881,7 @@ func (x Expr) reflectGetNth(data any, i int) (v any, has bool) {
 	return
 }
 
-func (x Expr) reflectGetWild(data any) (va []any) {
+func reflectGetWild(data any) (va []any) {
 	if !isNil(data) {
 		rd := reflect.ValueOf(data)
 		rt := rd.Type()
@@ -1860,7 +1910,7 @@ func (x Expr) reflectGetWild(data any) (va []any) {
 	return
 }
 
-func (x Expr) reflectGetWildOne(data any) (any, bool) {
+func reflectGetWildOne(data any) (any, bool) {
 	if !isNil(data) {
 		rd := reflect.ValueOf(data)
 		rt := rd.Type()
@@ -1889,7 +1939,7 @@ func (x Expr) reflectGetWildOne(data any) (any, bool) {
 	return nil, false
 }
 
-func (x Expr) reflectGetSlice(data any, start, end, step int) (va []any) {
+func reflectGetSlice(data any, start, end, step int) (va []any) {
 	if !isNil(data) {
 		rd := reflect.ValueOf(data)
 		rt := rd.Type()

@@ -138,6 +138,26 @@ func (f Slice) remove(value any) (out any, changed bool) {
 		if changed {
 			out = ns
 		}
+	case RemovableIndexed:
+		size := tv.Size()
+		if start < 0 {
+			start = size + start
+		}
+		if end < 0 {
+			end = size + end
+		}
+		if size <= end {
+			end = size - 1
+		}
+		if start < 0 || end < 0 || size <= start || size <= end || step == 0 {
+			return
+		}
+		for i := size - 1; 0 <= i; i-- {
+			if inStep(i, start, end, step) {
+				changed = true
+				tv.RemoveValueAtIndex(i)
+			}
+		}
 	default:
 		rv := reflect.ValueOf(value)
 		if rv.Kind() == reflect.Slice {
@@ -283,6 +303,27 @@ func (f Slice) removeOne(value any) (out any, changed bool) {
 		}
 		if changed {
 			out = ns
+		}
+	case RemovableIndexed:
+		size := tv.Size()
+		if start < 0 {
+			start = size + start
+		}
+		if end < 0 {
+			end = size + end
+		}
+		if size <= end {
+			end = size - 1
+		}
+		if start < 0 || end < 0 || size <= start || size <= end || step == 0 {
+			return
+		}
+		for i := 0; i < size; i++ {
+			if inStep(i, start, end, step) {
+				changed = true
+				tv.RemoveValueAtIndex(i)
+				break
+			}
 		}
 	default:
 		rv := reflect.ValueOf(value)
@@ -551,4 +592,35 @@ func (f Slice) locate(pp Expr, data any, rest Expr, max int) (locs []Expr) {
 		}
 	}
 	return
+}
+
+// Walk each element in a slice as defined by the Slice fragment.
+func (f Slice) Walk(rest, path Expr, nodes []any, cb func(path Expr, nodes []any)) {
+	var max int
+	switch tn := nodes[len(nodes)-1].(type) {
+	case []any:
+		max = len(tn)
+	case gen.Array:
+		max = len(tn)
+	case Indexed:
+		max = tn.Size()
+	default:
+		rv := reflect.ValueOf(tn)
+		if rv.Kind() == reflect.Slice {
+			max = rv.Len()
+		}
+	}
+	start, end, step := f.startEndStep(max)
+	if step == 0 {
+		return
+	}
+	if 0 < step {
+		for i := start; i < end; i += step {
+			Nth(i).Walk(rest, path, nodes, cb)
+		}
+	} else {
+		for i := start; end < i; i += step {
+			Nth(i).Walk(rest, path, nodes, cb)
+		}
+	}
 }

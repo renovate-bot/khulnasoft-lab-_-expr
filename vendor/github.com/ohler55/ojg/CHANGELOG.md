@@ -4,6 +4,115 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 The structure and content of this file follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.26.10] - 2025-08-30
+### Fixed
+- Fixed float parsing issues.
+
+## [1.26.9] - 2025-08-18
+### Fixed
+- Filtering now supports typed core type such as `type Color string` thans to @rdumont
+
+## [1.26.8] - 2025-06-29
+### Fixed
+- Fixed support for pointers to slice and pointer to value thanks to @edward-frankieone.
+
+## [1.26.7] - 2025-06-23
+### Fixed
+- Fixed then bleed over of omitempty in struct tags. Issue #205.
+- Fixed encoding anonymous interface in structs. Issue #115
+- Bare @.x style existence checks in filters not work correctly.
+
+## [1.26.6] - 2025-05-27
+### Fixed
+- Types derived from core type such as `type Quux int` now alt.Decompose correctly.
+
+## [1.26.5] - 2025-05-12
+### Fixed
+- User defined unary operations for jp scripts are now handled correctly.
+
+## [1.26.4] - 2025-04-27
+### Fixed
+- Identify field names that start with '_' as private.
+
+## [1.26.3] - 2025-04-06
+### Changed
+- Updated linter configuration file for golangci-lint v2
+- Backed off the go.mod go version to the minimum required of v1.18.
+
+## [1.26.2] - 2025-03-09
+### Fixed
+- Index on node get fixed.
+### Changed
+- Updated to go v1.24
+
+## [1.26.1] - 2025-01-09
+### Fixed
+- Fixed issue #197 where nested array elements were not filled when using `oj.Match()`.
+
+## [1.26.0] - 2024-12-31
+### Added
+- Support for non-selector scripts added to the jp package. See the
+  `jp.CompileScript` variable along with the `Proc` fragment type and
+  `Procedure` interface.
+
+## [1.25.1] - 2024-12-26
+### Fixed
+- Fixed precision loss with some fraction parsing.
+
+## [1.25.0] - 2024-10-26
+### Added
+- The `Expr.Walk()` function was added. Similar to jp.Walk but walk expression matches.
+
+## [1.24.1] - 2024-09-15
+### Fixed
+- Fixed reflection map key matches when keys are string derivitives.
+
+## [1.24.0] - 2024-08-09
+### Added
+- Added the `jp.PathMatch` function that compares a normalized JSONPath with a target JSONPath.
+- Added `jp.MatchHandler` a TokenHandler that can be used to
+  build a path and data while processing a JSON document.
+- Added `oj.Match` and `sen.Match` functions.
+
+## [1.23.0] - 2024-07-07
+### Added
+- New script functions can now be added with `jp.RegisterUnaryFunction()` and `jp.RegisterBinaryFunction()`.
+
+## [1.22.1] - 2024-06-23
+### Added
+- Added the missing support of Keyed and Indexed in jp.Modify.
+
+## [1.22.0] - 2024-04-22
+### Added
+- Added support for C style comment /* */ in the SEN parser.
+### Fixed
+- Comments are the start of a SEN document now parses without error.
+
+## [1.21.5] - 2024-04-11
+### Added
+- Makefiles
+
+## [1.21.4] - 2024-02-29
+### Fixed
+- Fixed regexp parsing to allow regexp escape sequences.
+
+## [1.21.3] - 2024-02-20
+### Fixed
+- Evaluation of a not group such as `!(@.x == 2)` is now correct.
+
+## [1.21.2] - 2024-02-14
+### Fixed
+- Reworked the jp equation parser to eliminate some parsing issues.
+- Fixed wildcards in filters so that if any value is true a match is
+  returned. As an example, a path of `a[?(@.b[*].c == 2)].b[0]` might
+  match multiple values of `c` in array `b`. If any of the values is 2
+  then it is considered a match.
+
+## [1.21.1] - 2024-02-02
+### Fixed
+- Fixed script parsing when padded with spaces.
+- Fixed script parsing for negation without parenthesis.
+
 ## [1.21.0] - 2023-12-18
 ### Added
 - Added the Expr function `BracketString` to force the use of bracket

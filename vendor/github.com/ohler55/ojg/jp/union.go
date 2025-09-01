@@ -127,6 +127,25 @@ func (f Union) removeOne(value any) (out any, changed bool) {
 				}
 			}
 		}
+	case RemovableIndexed:
+		size := tv.Size()
+		for i := 0; i < size; i++ {
+			if f.hasN(int64(i)) {
+				tv.RemoveValueAtIndex(i)
+				changed = true
+				break
+			}
+		}
+	case Keyed:
+		keys := tv.Keys()
+		sort.Strings(keys)
+		for _, k := range keys {
+			if f.hasKey(k) {
+				tv.RemoveValueForKey(k)
+				changed = true
+				break
+			}
+		}
 	default:
 		rv := reflect.ValueOf(value)
 		switch rv.Kind() {
@@ -216,6 +235,22 @@ func (f Union) remove(value any) (out any, changed bool) {
 				changed = true
 			}
 		}
+	case RemovableIndexed:
+		size := tv.Size()
+		for i := (size - 1); i >= 0; i-- {
+			if f.hasN(int64(i)) {
+				tv.RemoveValueAtIndex(i)
+				changed = true
+			}
+		}
+	case Keyed:
+		keys := tv.Keys()
+		for _, k := range keys {
+			if f.hasKey(k) {
+				tv.RemoveValueForKey(k)
+				changed = true
+			}
+		}
 	default:
 		rv := reflect.ValueOf(value)
 		switch rv.Kind() {
@@ -278,7 +313,7 @@ func (f Union) locate(pp Expr, data any, rest Expr, max int) (locs []Expr) {
 			case gen.Object:
 				v, has = td[tu]
 			default:
-				v, has = pp.reflectGetChild(td, tu)
+				v, has = reflectGetChild(td, tu)
 			}
 			lf = Child(tu)
 		case int64:
@@ -309,7 +344,7 @@ func (f Union) locate(pp Expr, data any, rest Expr, max int) (locs []Expr) {
 					has = true
 				}
 			default:
-				v, has = pp.reflectGetNth(td, i)
+				v, has = reflectGetNth(td, i)
 			}
 			lf = Nth(i)
 		}
@@ -325,4 +360,16 @@ func (f Union) locate(pp Expr, data any, rest Expr, max int) (locs []Expr) {
 		}
 	}
 	return
+}
+
+// Walk each element in a union.
+func (f Union) Walk(rest, path Expr, nodes []any, cb func(path Expr, nodes []any)) {
+	for _, u := range f {
+		switch tu := u.(type) {
+		case int64:
+			Nth(tu).Walk(rest, path, nodes, cb)
+		case string:
+			Child(tu).Walk(rest, path, nodes, cb)
+		}
+	}
 }

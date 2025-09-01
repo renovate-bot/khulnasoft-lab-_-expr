@@ -7,7 +7,7 @@ require (
 	github.com/google/cel-go v0.18.2
 	github.com/google/uuid v1.6.0
 	github.com/karlseguin/ccache/v2 v2.0.8
-	github.com/ohler55/ojg v1.21.0
+	github.com/ohler55/ojg v1.26.10
 	github.com/sourcegraph/conc v0.3.0
 	github.com/stretchr/testify v1.8.4
 	github.com/tidwall/btree v1.7.0
