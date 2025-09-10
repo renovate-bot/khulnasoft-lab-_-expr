@@ -11,7 +11,7 @@ require (
 	github.com/sourcegraph/conc v0.3.0
 	github.com/stretchr/testify v1.8.4
 	github.com/tidwall/btree v1.7.0
-	google.golang.org/protobuf v1.33.0
+	google.golang.org/protobuf v1.36.9
 )
 
 require (
